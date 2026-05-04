@@ -5,11 +5,12 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 
 import { TEETH_DATABASE } from '@/data/teeth';
-import type { CollectionEntry } from '@/types/tooth';
+import type { CollectionEntry, FieldNoteSaveDraft } from '@/types/tooth';
 
 const STORAGE_KEY = '@toothdex/persisted/v1';
 
@@ -17,6 +18,8 @@ type PersistedShape = {
   collection: CollectionEntry[];
   unlockedToothIds: string[];
 };
+
+export type ScanSaveCelebration = { type: 'newDex' | 'saved'; name: string } | null;
 
 type CollectionContextValue = {
   collection: CollectionEntry[];
@@ -28,6 +31,11 @@ type CollectionContextValue = {
   registerDiscovery: (toothId: string) => void;
   addToCollection: (entry: Omit<CollectionEntry, 'entryId' | 'savedAt'> & { savedAt?: string }) => void;
   getRecentDiscoveries: (limit?: number) => CollectionEntry[];
+  fieldNoteDraft: FieldNoteSaveDraft | null;
+  setFieldNoteDraft: (draft: FieldNoteSaveDraft | null) => void;
+  /** After saving from Field Note, Scan consumes this on focus. */
+  queueScanSaveCelebration: (c: ScanSaveCelebration) => void;
+  consumeQueuedScanCelebration: () => ScanSaveCelebration;
 };
 
 const CollectionContext = createContext<CollectionContextValue | null>(null);
@@ -40,6 +48,8 @@ export function CollectionProvider({ children }: { children: React.ReactNode }) 
   const [collection, setCollection] = useState<CollectionEntry[]>([]);
   const [unlockedToothIds, setUnlockedToothIds] = useState<string[]>([]);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [fieldNoteDraft, setFieldNoteDraft] = useState<FieldNoteSaveDraft | null>(null);
+  const scanCelebrationQueueRef = useRef<ScanSaveCelebration>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -81,12 +91,23 @@ export function CollectionProvider({ children }: { children: React.ReactNode }) 
         imageUri: entry.imageUri,
         confidence: entry.confidence,
         savedAt: entry.savedAt ?? new Date().toISOString(),
+        fieldNotes: entry.fieldNotes,
       };
       setCollection((prev) => [full, ...prev]);
       setUnlockedToothIds((prev) => (prev.includes(entry.toothId) ? prev : [...prev, entry.toothId]));
     },
     []
   );
+
+  const queueScanSaveCelebration = useCallback((c: ScanSaveCelebration) => {
+    scanCelebrationQueueRef.current = c;
+  }, []);
+
+  const consumeQueuedScanCelebration = useCallback(() => {
+    const v = scanCelebrationQueueRef.current;
+    scanCelebrationQueueRef.current = null;
+    return v;
+  }, []);
 
   const collectedSpecies = useMemo(() => uniqueSpeciesIds(collection), [collection]);
   const unlockedSet = useMemo(() => new Set(unlockedToothIds), [unlockedToothIds]);
@@ -110,6 +131,10 @@ export function CollectionProvider({ children }: { children: React.ReactNode }) 
       registerDiscovery,
       addToCollection,
       getRecentDiscoveries,
+      fieldNoteDraft,
+      setFieldNoteDraft,
+      queueScanSaveCelebration,
+      consumeQueuedScanCelebration,
     }),
     [
       collection,
@@ -119,6 +144,9 @@ export function CollectionProvider({ children }: { children: React.ReactNode }) 
       registerDiscovery,
       addToCollection,
       getRecentDiscoveries,
+      fieldNoteDraft,
+      queueScanSaveCelebration,
+      consumeQueuedScanCelebration,
     ]
   );
 

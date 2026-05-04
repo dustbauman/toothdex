@@ -75,6 +75,17 @@ function RootLayoutNav() {
               headerShadowVisible: false,
             }}
           />
+          <Stack.Screen
+            name="field-note"
+            options={{
+              presentation: 'modal',
+              headerShown: true,
+              headerStyle: { backgroundColor: ToothTheme.oceanDeep },
+              headerTintColor: ToothTheme.textPrimary,
+              headerTitleStyle: { fontWeight: '700' },
+              headerShadowVisible: false,
+            }}
+          />
           <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
         </Stack>
       </CollectionProvider>

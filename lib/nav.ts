@@ -4,3 +4,7 @@ import type { Href } from 'expo-router';
 export function hrefToothGuide(toothId: string): Href {
   return { pathname: '/tooth/[id]', params: { id: toothId } } as unknown as Href;
 }
+
+export function hrefFieldNote(): Href {
+  return '/field-note' as unknown as Href;
+}

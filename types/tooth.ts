@@ -12,12 +12,32 @@ export type ToothRecord = {
   collectingTips: string[];
 };
 
+export type ToothCondition = 'excellent' | 'good' | 'worn' | 'fragment';
+
+/** Optional field notes captured when saving a find (all fields optional). */
+export type FieldNotes = {
+  locationNote?: string;
+  sizeEstimate?: string;
+  condition?: ToothCondition;
+  personalNotes?: string;
+};
+
+/** In-memory payload while the Field Note modal is open (not persisted). */
+export type FieldNoteSaveDraft = {
+  toothId: string;
+  imageUri: string | null;
+  confidence: number;
+  toothCommonName: string;
+  isFirstVaultSpecies: boolean;
+};
+
 export type CollectionEntry = {
   entryId: string;
   toothId: string;
   savedAt: string;
   imageUri: string | null;
   confidence: number;
+  fieldNotes?: FieldNotes;
 };
 
 export type ScanResult = {

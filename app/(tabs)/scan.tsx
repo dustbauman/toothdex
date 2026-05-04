@@ -1,5 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
+import { useFocusEffect } from '@react-navigation/native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
@@ -23,7 +24,7 @@ import { TraitChecklist } from '@/components/toothdex/TraitChecklist';
 import { Theme } from '@/constants/Theme';
 import { useCollection } from '@/context/CollectionContext';
 import { classifyToothDemo } from '@/lib/demoClassifier';
-import { hrefToothGuide } from '@/lib/nav';
+import { hrefFieldNote, hrefToothGuide } from '@/lib/nav';
 import { rarityColor, rarityLabel } from '@/lib/rarity';
 import type { ScanResult } from '@/types/tooth';
 
@@ -34,7 +35,12 @@ type Celebration = { type: 'newDex' | 'saved'; name: string } | null;
 
 export default function ScanScreen() {
   const router = useRouter();
-  const { registerDiscovery, addToCollection, collection } = useCollection();
+  const {
+    registerDiscovery,
+    collection,
+    setFieldNoteDraft,
+    consumeQueuedScanCelebration,
+  } = useCollection();
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [result, setResult] = useState<ScanResult | null>(null);
   const [phase, setPhase] = useState<Phase>('idle');
@@ -113,26 +119,34 @@ export default function ScanScreen() {
     });
   }, [analyzing, imageUri, progressAnim, registerDiscovery]);
 
-  const addFind = () => {
+  useFocusEffect(
+    useCallback(() => {
+      const c = consumeQueuedScanCelebration();
+      if (!c) return;
+      setCelebration(c);
+      if (Platform.OS !== 'web') {
+        if (c.type === 'newDex') {
+          void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } else {
+          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        }
+      }
+      // Do not clear this timeout on blur — tab switches would leave the banner stuck.
+      setTimeout(() => setCelebration(null), 4200);
+    }, [consumeQueuedScanCelebration])
+  );
+
+  const openFieldNote = () => {
     if (!result) return;
     const hadSpeciesInVault = collection.some((e) => e.toothId === result.tooth.id);
-    addToCollection({
+    setFieldNoteDraft({
       toothId: result.tooth.id,
       imageUri,
       confidence: result.confidence,
+      toothCommonName: result.tooth.commonName,
+      isFirstVaultSpecies: !hadSpeciesInVault,
     });
-    if (!hadSpeciesInVault) {
-      setCelebration({ type: 'newDex', name: result.tooth.commonName });
-      if (Platform.OS !== 'web') {
-        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      }
-    } else {
-      setCelebration({ type: 'saved', name: result.tooth.commonName });
-      if (Platform.OS !== 'web') {
-        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
-    }
-    setTimeout(() => setCelebration(null), 4200);
+    router.push(hrefFieldNote());
   };
 
   return (
@@ -219,7 +233,8 @@ export default function ScanScreen() {
             style={styles.guideBtn}
           />
 
-          <PrimaryButton label="Add to collection" onPress={addFind} style={styles.addBtn} />
+          <PrimaryButton label="Add to collection" onPress={openFieldNote} style={styles.addBtn} />
+          <Text style={styles.fieldNoteHint}>Opens a quick field note — every line is optional.</Text>
 
           {celebration?.type === 'newDex' ? (
             <View style={styles.celebrateNew} accessibilityRole="alert">
@@ -357,6 +372,13 @@ const styles = StyleSheet.create({
   },
   addBtn: {
     marginTop: 8,
+  },
+  fieldNoteHint: {
+    marginTop: 8,
+    textAlign: 'center',
+    color: Theme.textMuted,
+    fontSize: 13,
+    lineHeight: 18,
   },
   celebrateNew: {
     flexDirection: 'row',

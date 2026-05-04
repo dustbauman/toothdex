@@ -6,6 +6,7 @@ import { ToothCard } from '@/components/toothdex/ToothCard';
 import { Theme } from '@/constants/Theme';
 import { TOOTH_BY_ID } from '@/data/teeth';
 import { useCollection } from '@/context/CollectionContext';
+import { conditionLabel } from '@/lib/fieldNotes';
 import { hrefToothGuide } from '@/lib/nav';
 import { rarityColor, rarityLabel } from '@/lib/rarity';
 
@@ -21,7 +22,8 @@ export default function CollectionScreen() {
       {collection.length === 0 ? (
         <ToothCard title="No teeth yet" subtitle="Scan a tooth, run Identify, then tap Add to collection.">
           <Text style={styles.emptyBody}>
-            Your vault will list rarity, date, and photo thumbnails so you can relive each hunt.
+            Your vault will list rarity, date, optional field notes, and photo thumbnails so you can relive each
+            hunt.
           </Text>
         </ToothCard>
       ) : (
@@ -29,6 +31,7 @@ export default function CollectionScreen() {
           {collection.map((item) => {
             const tooth = TOOTH_BY_ID[item.toothId];
             if (!tooth) return null;
+            const fn = item.fieldNotes;
             return (
               <Pressable
                 key={item.entryId}
@@ -49,6 +52,28 @@ export default function CollectionScreen() {
                     {new Date(item.savedAt).toLocaleString()} ·{' '}
                     <Text style={{ color: rarityColor(tooth.rarity) }}>{rarityLabel(tooth.rarity)}</Text>
                   </Text>
+                  {fn?.locationNote ? (
+                    <Text style={styles.fieldLine} numberOfLines={2}>
+                      <Text style={styles.fieldKey}>Where </Text>
+                      {fn.locationNote}
+                    </Text>
+                  ) : null}
+                  {fn?.sizeEstimate ? (
+                    <Text style={styles.fieldLine} numberOfLines={1}>
+                      <Text style={styles.fieldKey}>Size </Text>
+                      {fn.sizeEstimate}
+                    </Text>
+                  ) : null}
+                  {fn?.condition ? (
+                    <View style={styles.condPill}>
+                      <Text style={styles.condPillText}>{conditionLabel(fn.condition)}</Text>
+                    </View>
+                  ) : null}
+                  {fn?.personalNotes ? (
+                    <Text style={styles.personal} numberOfLines={3}>
+                      {fn.personalNotes}
+                    </Text>
+                  ) : null}
                   <Text style={styles.conf}>
                     Match confidence {(item.confidence * 100).toFixed(0)}% (demo)
                   </Text>
@@ -98,6 +123,38 @@ const styles = StyleSheet.create({
     color: Theme.amberGlow,
     fontSize: 12,
     fontWeight: '700',
+  },
+  fieldLine: {
+    marginTop: 8,
+    color: Theme.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  fieldKey: {
+    color: Theme.textMuted,
+    fontWeight: '700',
+  },
+  condPill: {
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: 'rgba(232, 184, 77, 0.15)',
+    borderWidth: 1,
+    borderColor: Theme.border,
+  },
+  condPillText: {
+    color: Theme.amberGlow,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  personal: {
+    marginTop: 8,
+    color: Theme.sand,
+    fontSize: 13,
+    lineHeight: 18,
+    fontStyle: 'italic',
   },
   thumb: {
     width: 72,
