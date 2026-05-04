@@ -1,12 +1,25 @@
 import * as ImagePicker from 'expo-image-picker';
 import * as Haptics from 'expo-haptics';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Alert, Image, Platform, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import {
+  Alert,
+  Animated,
+  Easing,
+  Image,
+  Platform,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
+import { ConfidenceMeter } from '@/components/toothdex/ConfidenceMeter';
 import { PrimaryButton } from '@/components/toothdex/PrimaryButton';
+import { ScanAnalyzingBanner } from '@/components/toothdex/ScanAnalyzingBanner';
 import { ScreenScroll } from '@/components/toothdex/ScreenScroll';
 import { ToothCard } from '@/components/toothdex/ToothCard';
+import { TraitChecklist } from '@/components/toothdex/TraitChecklist';
 import { Theme } from '@/constants/Theme';
 import { useCollection } from '@/context/CollectionContext';
 import { classifyToothDemo } from '@/lib/demoClassifier';
@@ -14,14 +27,31 @@ import { hrefToothGuide } from '@/lib/nav';
 import { rarityColor, rarityLabel } from '@/lib/rarity';
 import type { ScanResult } from '@/types/tooth';
 
+const ANALYSIS_MS = 1680;
+
+type Phase = 'idle' | 'analyzing' | 'revealed';
+type Celebration = { type: 'newDex' | 'saved'; name: string } | null;
+
 export default function ScanScreen() {
   const router = useRouter();
-  const { registerDiscovery, addToCollection } = useCollection();
+  const { registerDiscovery, addToCollection, collection } = useCollection();
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [result, setResult] = useState<ScanResult | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [phase, setPhase] = useState<Phase>('idle');
+  const [celebration, setCelebration] = useState<Celebration>(null);
+  const progressAnim = useRef(new Animated.Value(0)).current;
+  const scanRunRef = useRef(0);
+
+  const bumpScanGeneration = useCallback(() => {
+    scanRunRef.current += 1;
+    progressAnim.stopAnimation();
+  }, [progressAnim]);
+
+  const analyzing = phase === 'analyzing';
+  const revealed = phase === 'revealed' && result !== null;
 
   const pickFromLibrary = async () => {
+    if (analyzing) return;
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
       Alert.alert('Permission needed', 'Allow photo library access to pick a tooth image.');
@@ -32,12 +62,16 @@ export default function ScanScreen() {
       quality: 0.85,
     });
     if (!picked.canceled && picked.assets[0]) {
+      bumpScanGeneration();
       setImageUri(picked.assets[0].uri);
       setResult(null);
+      setPhase('idle');
+      setCelebration(null);
     }
   };
 
   const takePhoto = async () => {
+    if (analyzing) return;
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) {
       Alert.alert('Permission needed', 'Allow camera access to photograph a tooth.');
@@ -45,33 +79,60 @@ export default function ScanScreen() {
     }
     const shot = await ImagePicker.launchCameraAsync({ quality: 0.85 });
     if (!shot.canceled && shot.assets[0]) {
+      bumpScanGeneration();
       setImageUri(shot.assets[0].uri);
       setResult(null);
+      setPhase('idle');
+      setCelebration(null);
     }
   };
 
-  const identify = () => {
-    setBusy(true);
-    try {
+  const runIdentify = useCallback(() => {
+    if (!imageUri || analyzing) return;
+    bumpScanGeneration();
+    const runId = scanRunRef.current;
+    setCelebration(null);
+    setResult(null);
+    setPhase('analyzing');
+    progressAnim.setValue(0);
+
+    Animated.timing(progressAnim, {
+      toValue: 1,
+      duration: ANALYSIS_MS,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start(({ finished }) => {
+      if (!finished || scanRunRef.current !== runId) return;
       const next = classifyToothDemo(imageUri);
       setResult(next);
       registerDiscovery(next.tooth.id);
-    } finally {
-      setBusy(false);
-    }
-  };
+      setPhase('revealed');
+      if (Platform.OS !== 'web') {
+        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      }
+    });
+  }, [analyzing, imageUri, progressAnim, registerDiscovery]);
 
   const addFind = () => {
     if (!result) return;
+    const hadSpeciesInVault = collection.some((e) => e.toothId === result.tooth.id);
     addToCollection({
       toothId: result.tooth.id,
       imageUri,
       confidence: result.confidence,
     });
-    if (Platform.OS !== 'web') {
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (!hadSpeciesInVault) {
+      setCelebration({ type: 'newDex', name: result.tooth.commonName });
+      if (Platform.OS !== 'web') {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+    } else {
+      setCelebration({ type: 'saved', name: result.tooth.commonName });
+      if (Platform.OS !== 'web') {
+        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }
     }
-    Alert.alert('Saved', `${result.tooth.commonName} added to your collection.`);
+    setTimeout(() => setCelebration(null), 4200);
   };
 
   return (
@@ -82,12 +143,28 @@ export default function ScanScreen() {
       </Text>
 
       <View style={styles.row}>
-        <PrimaryButton label="Choose from library" variant="outline" style={styles.half} onPress={pickFromLibrary} />
-        <PrimaryButton label="Take photo" variant="outline" style={styles.half} onPress={takePhoto} />
+        <PrimaryButton
+          label="Choose from library"
+          variant="outline"
+          style={styles.half}
+          onPress={pickFromLibrary}
+          disabled={analyzing}
+        />
+        <PrimaryButton
+          label="Take photo"
+          variant="outline"
+          style={styles.half}
+          onPress={takePhoto}
+          disabled={analyzing}
+        />
       </View>
 
       {imageUri ? (
-        <Image source={{ uri: imageUri }} style={styles.preview} resizeMode="cover" />
+        <Image
+          source={{ uri: imageUri }}
+          style={[styles.preview, analyzing && styles.previewDim]}
+          resizeMode="cover"
+        />
       ) : (
         <View style={styles.previewPlaceholder}>
           <Text style={styles.previewHint}>Image preview</Text>
@@ -95,18 +172,19 @@ export default function ScanScreen() {
         </View>
       )}
 
+      <ScanAnalyzingBanner active={analyzing} progress={progressAnim} />
+
       <PrimaryButton
-        label={busy ? 'Identifying…' : 'Identify tooth'}
-        onPress={identify}
-        disabled={!imageUri || busy}
+        label={analyzing ? 'Analyzing…' : 'Identify tooth'}
+        onPress={runIdentify}
+        disabled={!imageUri || analyzing}
         style={styles.identify}
       />
 
-      {result ? (
-        <ToothCard
-          style={styles.result}
-          title="Likely match"
-          subtitle={`${(result.confidence * 100).toFixed(0)}% confidence (demo)`}>
+      {result && revealed ? (
+        <ToothCard style={styles.result} title="Likely match" subtitle="Demo classifier — for show only">
+          <ConfidenceMeter confidence={result.confidence} reveal={revealed} />
+
           <Text style={styles.matchName}>{result.tooth.commonName}</Text>
           <Text style={styles.latin}>{result.tooth.scientificName}</Text>
           <View style={styles.badgeRow}>
@@ -118,12 +196,11 @@ export default function ScanScreen() {
             <Text style={styles.era}>{result.tooth.era}</Text>
           </View>
 
-          <Text style={styles.blockLabel}>ID traits</Text>
-          {result.highlightedTraits.map((t) => (
-            <Text key={t} style={styles.bullet}>
-              • {t}
-            </Text>
-          ))}
+          <TraitChecklist
+            key={result.tooth.id}
+            traits={result.tooth.identificationTraits}
+            active={revealed}
+          />
 
           <Text style={styles.blockLabel}>Fun facts</Text>
           {result.tooth.funFacts.slice(0, 2).map((f) => (
@@ -143,6 +220,25 @@ export default function ScanScreen() {
           />
 
           <PrimaryButton label="Add to collection" onPress={addFind} style={styles.addBtn} />
+
+          {celebration?.type === 'newDex' ? (
+            <View style={styles.celebrateNew} accessibilityRole="alert">
+              <FontAwesome name="star" size={22} color={Theme.amberGlow} style={styles.celebrateIcon} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.celebrateTitle}>New Dex entry unlocked</Text>
+                <Text style={styles.celebrateSub}>
+                  {celebration.name} is now in your vault roster. Keep hunting the rest!
+                </Text>
+              </View>
+            </View>
+          ) : celebration?.type === 'saved' ? (
+            <View style={styles.celebrateSaved} accessibilityRole="text">
+              <FontAwesome name="bookmark" size={18} color={Theme.foam} style={styles.celebrateIcon} />
+              <Text style={styles.celebrateSavedText}>
+                {celebration.name} saved — another specimen for your collection.
+              </Text>
+            </View>
+          ) : null}
         </ToothCard>
       ) : null}
     </ScreenScroll>
@@ -173,6 +269,9 @@ const styles = StyleSheet.create({
     backgroundColor: Theme.mystery,
     borderWidth: 1,
     borderColor: Theme.border,
+  },
+  previewDim: {
+    opacity: 0.52,
   },
   previewPlaceholder: {
     width: '100%',
@@ -246,12 +345,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 6,
   },
-  bullet: {
-    color: Theme.textSecondary,
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 4,
-  },
   body: {
     color: Theme.textSecondary,
     fontSize: 14,
@@ -264,5 +357,47 @@ const styles = StyleSheet.create({
   },
   addBtn: {
     marginTop: 8,
+  },
+  celebrateNew: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginTop: 16,
+    padding: 14,
+    borderRadius: 14,
+    backgroundColor: 'rgba(232, 184, 77, 0.12)',
+    borderWidth: 1.5,
+    borderColor: Theme.amber,
+  },
+  celebrateSaved: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 14,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(168, 197, 217, 0.1)',
+    borderWidth: 1,
+    borderColor: Theme.border,
+  },
+  celebrateIcon: {
+    marginTop: 2,
+  },
+  celebrateTitle: {
+    color: Theme.amberGlow,
+    fontSize: 17,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  celebrateSub: {
+    color: Theme.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  celebrateSavedText: {
+    flex: 1,
+    color: Theme.textSecondary,
+    fontSize: 14,
+    lineHeight: 20,
   },
 });

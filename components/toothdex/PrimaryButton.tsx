@@ -8,16 +8,19 @@ type Props = PressableProps & {
   style?: ViewStyle;
 };
 
-export function PrimaryButton({ label, variant = 'amber', style, ...rest }: Props) {
+export function PrimaryButton({ label, variant = 'amber', style, disabled, ...rest }: Props) {
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled: !!disabled }}
+      disabled={disabled}
       style={({ pressed }) => [
         styles.base,
         variant === 'amber' && styles.amber,
         variant === 'outline' && styles.outline,
         variant === 'ghost' && styles.ghost,
-        pressed && styles.pressed,
+        pressed && !disabled && styles.pressed,
+        disabled && styles.disabled,
         style,
       ]}
       {...rest}>
@@ -60,6 +63,9 @@ const styles = StyleSheet.create({
   pressed: {
     opacity: 0.88,
     transform: [{ scale: 0.99 }],
+  },
+  disabled: {
+    opacity: 0.45,
   },
   label: {
     fontSize: 17,
