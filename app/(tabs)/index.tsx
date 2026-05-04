@@ -1,5 +1,5 @@
-import { Link } from 'expo-router';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Link, useRouter } from 'expo-router';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PrimaryButton } from '@/components/toothdex/PrimaryButton';
 import { ScreenScroll } from '@/components/toothdex/ScreenScroll';
@@ -7,9 +7,11 @@ import { ToothCard } from '@/components/toothdex/ToothCard';
 import { Theme } from '@/constants/Theme';
 import { TOOTH_BY_ID } from '@/data/teeth';
 import { useCollection } from '@/context/CollectionContext';
+import { hrefToothGuide } from '@/lib/nav';
 import { rarityColor, rarityLabel } from '@/lib/rarity';
 
 export default function HomeScreen() {
+  const router = useRouter();
   const {
     totalSpecies,
     collectedSpeciesCount,
@@ -59,7 +61,11 @@ export default function HomeScreen() {
             const tooth = TOOTH_BY_ID[item.toothId];
             if (!tooth) return null;
             return (
-              <View key={item.entryId} style={styles.recentRow}>
+              <Pressable
+                key={item.entryId}
+                accessibilityRole="button"
+                onPress={() => router.push(hrefToothGuide(item.toothId))}
+                style={({ pressed }) => [styles.recentRow, pressed && styles.recentRowPressed]}>
                 {item.imageUri ? (
                   <Image source={{ uri: item.imageUri }} style={styles.recentThumb} />
                 ) : (
@@ -73,8 +79,9 @@ export default function HomeScreen() {
                     {new Date(item.savedAt).toLocaleDateString()} ·{' '}
                     <Text style={{ color: rarityColor(tooth.rarity) }}>{rarityLabel(tooth.rarity)}</Text>
                   </Text>
+                  <Text style={styles.recentHint}>Field guide →</Text>
                 </View>
-              </View>
+              </Pressable>
             );
           })}
         </View>
@@ -168,6 +175,15 @@ const styles = StyleSheet.create({
     padding: 10,
     borderWidth: 1,
     borderColor: Theme.border,
+  },
+  recentRowPressed: {
+    opacity: 0.92,
+  },
+  recentHint: {
+    marginTop: 4,
+    color: Theme.amberGlow,
+    fontSize: 11,
+    fontWeight: '700',
   },
   recentThumb: {
     width: 52,

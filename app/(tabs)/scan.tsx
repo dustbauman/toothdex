@@ -1,6 +1,8 @@
 import * as ImagePicker from 'expo-image-picker';
+import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Image, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Platform, StyleSheet, Text, View } from 'react-native';
 
 import { PrimaryButton } from '@/components/toothdex/PrimaryButton';
 import { ScreenScroll } from '@/components/toothdex/ScreenScroll';
@@ -8,10 +10,12 @@ import { ToothCard } from '@/components/toothdex/ToothCard';
 import { Theme } from '@/constants/Theme';
 import { useCollection } from '@/context/CollectionContext';
 import { classifyToothDemo } from '@/lib/demoClassifier';
+import { hrefToothGuide } from '@/lib/nav';
 import { rarityColor, rarityLabel } from '@/lib/rarity';
 import type { ScanResult } from '@/types/tooth';
 
 export default function ScanScreen() {
+  const router = useRouter();
   const { registerDiscovery, addToCollection } = useCollection();
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [result, setResult] = useState<ScanResult | null>(null);
@@ -64,6 +68,9 @@ export default function ScanScreen() {
       imageUri,
       confidence: result.confidence,
     });
+    if (Platform.OS !== 'web') {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
     Alert.alert('Saved', `${result.tooth.commonName} added to your collection.`);
   };
 
@@ -118,8 +125,22 @@ export default function ScanScreen() {
             </Text>
           ))}
 
-          <Text style={styles.blockLabel}>Quick fact</Text>
-          <Text style={styles.body}>{result.tooth.funFacts[0]}</Text>
+          <Text style={styles.blockLabel}>Fun facts</Text>
+          {result.tooth.funFacts.slice(0, 2).map((f) => (
+            <Text key={f} style={styles.body}>
+              {f}
+            </Text>
+          ))}
+
+          <Text style={styles.blockLabel}>Collector tip</Text>
+          <Text style={styles.body}>{result.tooth.collectingTips[0]}</Text>
+
+          <PrimaryButton
+            label="View full field guide"
+            variant="ghost"
+            onPress={() => router.push(hrefToothGuide(result.tooth.id))}
+            style={styles.guideBtn}
+          />
 
           <PrimaryButton label="Add to collection" onPress={addFind} style={styles.addBtn} />
         </ToothCard>
@@ -235,7 +256,11 @@ const styles = StyleSheet.create({
     color: Theme.textSecondary,
     fontSize: 14,
     lineHeight: 20,
-    marginBottom: 12,
+    marginBottom: 10,
+  },
+  guideBtn: {
+    marginTop: 4,
+    marginBottom: 4,
   },
   addBtn: {
     marginTop: 8,

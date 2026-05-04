@@ -65,6 +65,16 @@ function RootLayoutNav() {
             contentStyle: { backgroundColor: ToothTheme.oceanDeep },
           }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="tooth/[id]"
+            options={{
+              headerShown: true,
+              headerStyle: { backgroundColor: ToothTheme.oceanDeep },
+              headerTintColor: ToothTheme.textPrimary,
+              headerTitleStyle: { fontWeight: '700' },
+              headerShadowVisible: false,
+            }}
+          />
           <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
         </Stack>
       </CollectionProvider>

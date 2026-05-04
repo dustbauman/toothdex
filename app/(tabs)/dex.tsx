@@ -1,12 +1,15 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ScreenScroll } from '@/components/toothdex/ScreenScroll';
 import { Theme } from '@/constants/Theme';
 import { TEETH_DATABASE } from '@/data/teeth';
 import { useCollection } from '@/context/CollectionContext';
+import { hrefToothGuide } from '@/lib/nav';
 import { rarityColor, rarityLabel } from '@/lib/rarity';
 
 export default function DexScreen() {
+  const router = useRouter();
   const { unlockedToothIds, totalSpecies, unlockedSpeciesCount } = useCollection();
 
   return (
@@ -20,26 +23,38 @@ export default function DexScreen() {
       <View style={styles.grid}>
         {TEETH_DATABASE.map((tooth) => {
           const unlocked = unlockedToothIds.has(tooth.id);
-          return (
-            <View key={tooth.id} style={[styles.tile, !unlocked && styles.tileLocked]}>
-              {!unlocked ? (
-                <>
-                  <Text style={styles.mysteryMark}>?</Text>
-                  <Text style={styles.mysteryLabel}>Unknown species</Text>
-                </>
-              ) : (
-                <>
-                  <Text style={styles.tileName} numberOfLines={2}>
-                    {tooth.commonName}
-                  </Text>
-                  <Text style={styles.tileLatin} numberOfLines={2}>
-                    {tooth.scientificName}
-                  </Text>
-                  <Text style={[styles.rarity, { color: rarityColor(tooth.rarity) }]}>
-                    {rarityLabel(tooth.rarity)}
-                  </Text>
-                </>
-              )}
+          const inner = !unlocked ? (
+            <>
+              <Text style={styles.mysteryMark}>?</Text>
+              <Text style={styles.mysteryLabel}>Unknown species</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.tileName} numberOfLines={2}>
+                {tooth.commonName}
+              </Text>
+              <Text style={styles.tileLatin} numberOfLines={2}>
+                {tooth.scientificName}
+              </Text>
+              <Text style={[styles.rarity, { color: rarityColor(tooth.rarity) }]}>
+                {rarityLabel(tooth.rarity)}
+              </Text>
+              <Text style={styles.tapHint}>Field guide →</Text>
+            </>
+          );
+
+          return unlocked ? (
+            <Pressable
+              key={tooth.id}
+              accessibilityRole="button"
+              accessibilityLabel={`Open field guide for ${tooth.commonName}`}
+              onPress={() => router.push(hrefToothGuide(tooth.id))}
+              style={({ pressed }) => [styles.tile, pressed && styles.tilePressed]}>
+              {inner}
+            </Pressable>
+          ) : (
+            <View key={tooth.id} style={[styles.tile, styles.tileLocked]}>
+              {inner}
             </View>
           );
         })}
@@ -70,7 +85,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     flexBasis: '47%',
     minWidth: '47%',
-    minHeight: 120,
+    minHeight: 128,
     backgroundColor: Theme.oceanMid,
     borderRadius: 16,
     padding: 12,
@@ -82,6 +97,16 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  tilePressed: {
+    opacity: 0.92,
+    transform: [{ scale: 0.98 }],
+  },
+  tapHint: {
+    marginTop: 8,
+    color: Theme.amberGlow,
+    fontSize: 12,
+    fontWeight: '700',
   },
   mysteryMark: {
     fontSize: 40,
@@ -104,7 +129,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontStyle: 'italic',
     marginTop: 4,
-    flex: 1,
   },
   rarity: {
     marginTop: 10,

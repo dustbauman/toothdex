@@ -1,13 +1,16 @@
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ScreenScroll } from '@/components/toothdex/ScreenScroll';
 import { ToothCard } from '@/components/toothdex/ToothCard';
 import { Theme } from '@/constants/Theme';
 import { TOOTH_BY_ID } from '@/data/teeth';
 import { useCollection } from '@/context/CollectionContext';
+import { hrefToothGuide } from '@/lib/nav';
 import { rarityColor, rarityLabel } from '@/lib/rarity';
 
 export default function CollectionScreen() {
+  const router = useRouter();
   const { collection } = useCollection();
 
   return (
@@ -27,7 +30,12 @@ export default function CollectionScreen() {
             const tooth = TOOTH_BY_ID[item.toothId];
             if (!tooth) return null;
             return (
-              <View key={item.entryId} style={styles.row}>
+              <Pressable
+                key={item.entryId}
+                accessibilityRole="button"
+                accessibilityLabel={`Open field guide for ${tooth.commonName}`}
+                onPress={() => router.push(hrefToothGuide(item.toothId))}
+                style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}>
                 {item.imageUri ? (
                   <Image source={{ uri: item.imageUri }} style={styles.thumb} />
                 ) : (
@@ -44,8 +52,9 @@ export default function CollectionScreen() {
                   <Text style={styles.conf}>
                     Match confidence {(item.confidence * 100).toFixed(0)}% (demo)
                   </Text>
+                  <Text style={styles.rowHint}>Field guide →</Text>
                 </View>
-              </View>
+              </Pressable>
             );
           })}
         </View>
@@ -80,6 +89,15 @@ const styles = StyleSheet.create({
     backgroundColor: Theme.oceanMid,
     borderWidth: 1,
     borderColor: Theme.border,
+  },
+  rowPressed: {
+    opacity: 0.92,
+  },
+  rowHint: {
+    marginTop: 6,
+    color: Theme.amberGlow,
+    fontSize: 12,
+    fontWeight: '700',
   },
   thumb: {
     width: 72,
