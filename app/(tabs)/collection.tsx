@@ -7,8 +7,9 @@ import { Theme } from '@/constants/Theme';
 import { TOOTH_BY_ID } from '@/data/teeth';
 import { useCollection } from '@/context/CollectionContext';
 import { conditionLabel } from '@/lib/fieldNotes';
-import { hrefToothGuide } from '@/lib/nav';
+import { hrefSpecimen } from '@/lib/nav';
 import { rarityColor, rarityLabel } from '@/lib/rarity';
+import { specimenCatalogLabel } from '@/lib/specimen';
 
 export default function CollectionScreen() {
   const router = useRouter();
@@ -36,8 +37,8 @@ export default function CollectionScreen() {
               <Pressable
                 key={item.entryId}
                 accessibilityRole="button"
-                accessibilityLabel={`Open field guide for ${tooth.commonName}`}
-                onPress={() => router.push(hrefToothGuide(item.toothId))}
+                accessibilityLabel={`Open specimen ${specimenCatalogLabel(item.specimenCode)} for ${tooth.commonName}`}
+                onPress={() => router.push(hrefSpecimen(item.entryId))}
                 style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}>
                 {item.imageUri ? (
                   <Image source={{ uri: item.imageUri }} style={styles.thumb} />
@@ -47,6 +48,7 @@ export default function CollectionScreen() {
                   </View>
                 )}
                 <View style={{ flex: 1 }}>
+                  <Text style={styles.catalogMuted}>{specimenCatalogLabel(item.specimenCode)}</Text>
                   <Text style={styles.name}>{tooth.commonName}</Text>
                   <Text style={styles.meta}>
                     {new Date(item.savedAt).toLocaleString()} ·{' '}
@@ -77,7 +79,7 @@ export default function CollectionScreen() {
                   <Text style={styles.conf}>
                     Match confidence {(item.confidence * 100).toFixed(0)}% (demo)
                   </Text>
-                  <Text style={styles.rowHint}>Field guide →</Text>
+                  <Text style={styles.rowHint}>Specimen record →</Text>
                 </View>
               </Pressable>
             );
@@ -168,6 +170,13 @@ const styles = StyleSheet.create({
   },
   thumbGlyph: {
     fontSize: 28,
+  },
+  catalogMuted: {
+    color: Theme.amberGlow,
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+    marginBottom: 2,
   },
   name: {
     color: Theme.textPrimary,

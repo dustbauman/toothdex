@@ -32,7 +32,10 @@ export type FieldNoteSaveDraft = {
 };
 
 export type CollectionEntry = {
+  /** Stable id for routing and specimen record (persisted). */
   entryId: string;
+  /** Monotonic specimen catalog number → display as TDX-0001 */
+  specimenCode: number;
   toothId: string;
   savedAt: string;
   imageUri: string | null;

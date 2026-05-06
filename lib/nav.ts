@@ -8,3 +8,7 @@ export function hrefToothGuide(toothId: string): Href {
 export function hrefFieldNote(): Href {
   return '/field-note' as unknown as Href;
 }
+
+export function hrefSpecimen(entryId: string): Href {
+  return { pathname: '/specimen/[entryId]', params: { entryId } } as unknown as Href;
+}

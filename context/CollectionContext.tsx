@@ -10,12 +10,13 @@ import React, {
 } from 'react';
 
 import { TEETH_DATABASE } from '@/data/teeth';
+import { ensureSpecimenCodes, type CollectionEntryPersisted } from '@/lib/specimen';
 import type { CollectionEntry, FieldNoteSaveDraft } from '@/types/tooth';
 
 const STORAGE_KEY = '@toothdex/persisted/v1';
 
 type PersistedShape = {
-  collection: CollectionEntry[];
+  collection: unknown[];
   unlockedToothIds: string[];
 };
 
@@ -29,7 +30,9 @@ type CollectionContextValue = {
   unlockedSpeciesCount: number;
   isHydrated: boolean;
   registerDiscovery: (toothId: string) => void;
-  addToCollection: (entry: Omit<CollectionEntry, 'entryId' | 'savedAt'> & { savedAt?: string }) => void;
+  addToCollection: (
+    entry: Omit<CollectionEntry, 'entryId' | 'savedAt' | 'specimenCode'> & { savedAt?: string }
+  ) => void;
   getRecentDiscoveries: (limit?: number) => CollectionEntry[];
   fieldNoteDraft: FieldNoteSaveDraft | null;
   setFieldNoteDraft: (draft: FieldNoteSaveDraft | null) => void;
@@ -59,7 +62,8 @@ export function CollectionProvider({ children }: { children: React.ReactNode }) 
         if (cancelled) return;
         if (raw) {
           const parsed = JSON.parse(raw) as PersistedShape;
-          setCollection(parsed.collection ?? []);
+          const migrated = ensureSpecimenCodes((parsed.collection ?? []) as CollectionEntryPersisted[]);
+          setCollection(migrated);
           setUnlockedToothIds(parsed.unlockedToothIds ?? []);
         }
       } catch {
@@ -84,16 +88,20 @@ export function CollectionProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   const addToCollection = useCallback(
-    (entry: Omit<CollectionEntry, 'entryId' | 'savedAt'> & { savedAt?: string }) => {
-      const full: CollectionEntry = {
-        entryId: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-        toothId: entry.toothId,
-        imageUri: entry.imageUri,
-        confidence: entry.confidence,
-        savedAt: entry.savedAt ?? new Date().toISOString(),
-        fieldNotes: entry.fieldNotes,
-      };
-      setCollection((prev) => [full, ...prev]);
+    (entry: Omit<CollectionEntry, 'entryId' | 'savedAt' | 'specimenCode'> & { savedAt?: string }) => {
+      setCollection((prev) => {
+        const maxCode = prev.reduce((m, e) => Math.max(m, e.specimenCode ?? 0), 0);
+        const full: CollectionEntry = {
+          entryId: `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+          specimenCode: maxCode + 1,
+          toothId: entry.toothId,
+          imageUri: entry.imageUri,
+          confidence: entry.confidence,
+          savedAt: entry.savedAt ?? new Date().toISOString(),
+          fieldNotes: entry.fieldNotes,
+        };
+        return [full, ...prev];
+      });
       setUnlockedToothIds((prev) => (prev.includes(entry.toothId) ? prev : [...prev, entry.toothId]));
     },
     []

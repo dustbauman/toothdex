@@ -76,6 +76,17 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen
+            name="specimen/[entryId]"
+            options={{
+              headerShown: true,
+              headerStyle: { backgroundColor: ToothTheme.oceanDeep },
+              headerTintColor: ToothTheme.textPrimary,
+              headerTitleStyle: { fontWeight: '700' },
+              headerShadowVisible: false,
+              title: 'Specimen',
+            }}
+          />
+          <Stack.Screen
             name="field-note"
             options={{
               presentation: 'modal',
