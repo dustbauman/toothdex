@@ -10,6 +10,7 @@ import React, {
 } from 'react';
 
 import { TEETH_DATABASE } from '@/data/teeth';
+import { backfillDiscoveryAt, type ToothDiscoveryMap } from '@/lib/dexDiscovery';
 import { ensureSpecimenCodes, type CollectionEntryPersisted } from '@/lib/specimen';
 import type { CollectionEntry, FieldNoteSaveDraft } from '@/types/tooth';
 
@@ -18,6 +19,7 @@ const STORAGE_KEY = '@toothdex/persisted/v1';
 type PersistedShape = {
   collection: unknown[];
   unlockedToothIds: string[];
+  toothDiscoveryAt?: ToothDiscoveryMap;
 };
 
 export type ScanSaveCelebration = { type: 'newDex' | 'saved'; name: string } | null;
@@ -39,6 +41,8 @@ type CollectionContextValue = {
   /** After saving from Field Note, Scan consumes this on focus. */
   queueScanSaveCelebration: (c: ScanSaveCelebration) => void;
   consumeQueuedScanCelebration: () => ScanSaveCelebration;
+  /** ISO first-unlock timestamps for Dex UX (persisted). */
+  toothDiscoveryAt: ToothDiscoveryMap;
 };
 
 const CollectionContext = createContext<CollectionContextValue | null>(null);
@@ -50,6 +54,7 @@ function uniqueSpeciesIds(entries: CollectionEntry[]): Set<string> {
 export function CollectionProvider({ children }: { children: React.ReactNode }) {
   const [collection, setCollection] = useState<CollectionEntry[]>([]);
   const [unlockedToothIds, setUnlockedToothIds] = useState<string[]>([]);
+  const [toothDiscoveryAt, setToothDiscoveryAt] = useState<ToothDiscoveryMap>({});
   const [isHydrated, setIsHydrated] = useState(false);
   const [fieldNoteDraft, setFieldNoteDraft] = useState<FieldNoteSaveDraft | null>(null);
   const scanCelebrationQueueRef = useRef<ScanSaveCelebration>(null);
@@ -63,8 +68,15 @@ export function CollectionProvider({ children }: { children: React.ReactNode }) 
         if (raw) {
           const parsed = JSON.parse(raw) as PersistedShape;
           const migrated = ensureSpecimenCodes((parsed.collection ?? []) as CollectionEntryPersisted[]);
+          const unlocked = parsed.unlockedToothIds ?? [];
+          const discovered = backfillDiscoveryAt(
+            migrated,
+            unlocked,
+            parsed.toothDiscoveryAt
+          );
           setCollection(migrated);
-          setUnlockedToothIds(parsed.unlockedToothIds ?? []);
+          setUnlockedToothIds(unlocked);
+          setToothDiscoveryAt(discovered);
         }
       } catch {
         // ignore corrupt storage
@@ -79,12 +91,16 @@ export function CollectionProvider({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     if (!isHydrated) return;
-    const payload: PersistedShape = { collection, unlockedToothIds };
+    const payload: PersistedShape = { collection, unlockedToothIds, toothDiscoveryAt };
     void AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
-  }, [collection, unlockedToothIds, isHydrated]);
+  }, [collection, unlockedToothIds, toothDiscoveryAt, isHydrated]);
 
   const registerDiscovery = useCallback((toothId: string) => {
+    const ts = new Date().toISOString();
     setUnlockedToothIds((prev) => (prev.includes(toothId) ? prev : [...prev, toothId]));
+    setToothDiscoveryAt((prev) =>
+      prev[toothId] ? prev : { ...prev, [toothId]: ts }
+    );
   }, []);
 
   const addToCollection = useCallback(
@@ -102,7 +118,13 @@ export function CollectionProvider({ children }: { children: React.ReactNode }) 
         };
         return [full, ...prev];
       });
-      setUnlockedToothIds((prev) => (prev.includes(entry.toothId) ? prev : [...prev, entry.toothId]));
+      setUnlockedToothIds((prev) =>
+        prev.includes(entry.toothId) ? prev : [...prev, entry.toothId]
+      );
+      const stamp = entry.savedAt ?? new Date().toISOString();
+      setToothDiscoveryAt((prev) =>
+        prev[entry.toothId] ? prev : { ...prev, [entry.toothId]: stamp }
+      );
     },
     []
   );
@@ -143,6 +165,7 @@ export function CollectionProvider({ children }: { children: React.ReactNode }) 
       setFieldNoteDraft,
       queueScanSaveCelebration,
       consumeQueuedScanCelebration,
+      toothDiscoveryAt,
     }),
     [
       collection,
@@ -155,6 +178,7 @@ export function CollectionProvider({ children }: { children: React.ReactNode }) 
       fieldNoteDraft,
       queueScanSaveCelebration,
       consumeQueuedScanCelebration,
+      toothDiscoveryAt,
     ]
   );
 
