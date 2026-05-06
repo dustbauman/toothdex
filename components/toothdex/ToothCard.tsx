@@ -21,20 +21,22 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: Theme.oceanMid,
     borderRadius: 16,
-    padding: 16,
+    padding: 18,
     borderWidth: 1,
     borderColor: Theme.border,
   },
   title: {
     color: Theme.textPrimary,
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
-    marginBottom: 4,
+    marginBottom: 6,
+    letterSpacing: 0.2,
   },
   subtitle: {
     color: Theme.textSecondary,
     fontSize: 14,
     marginBottom: 12,
     lineHeight: 20,
+    marginTop: -2,
   },
 });

@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ScreenScroll } from '@/components/toothdex/ScreenScroll';
 import { ToothCard } from '@/components/toothdex/ToothCard';
-import { Theme } from '@/constants/Theme';
+import { ScreenCopy, Theme } from '@/constants/Theme';
 import { TEETH_DATABASE } from '@/data/teeth';
 import { useCollection } from '@/context/CollectionContext';
 import { isRecentlyDiscovered } from '@/lib/dexDiscovery';
@@ -54,9 +54,10 @@ export default function DexScreen() {
 
   return (
     <ScreenScroll>
-      <Text style={styles.head}>Species Dex</Text>
-      <Text style={styles.sub}>
-        Build your fossil roster — every scan or save can register a new predator in the Dex.
+      <Text style={ScreenCopy.title}>Species Dex</Text>
+      <Text style={ScreenCopy.intro}>
+        Every Identify updates your roster preview; saving to the vault confirms the Dex entry — locked tiles fade
+        to full field-guide access.
       </Text>
 
       <ToothCard style={styles.summary} title="Dex progression">
@@ -81,7 +82,7 @@ export default function DexScreen() {
         </View>
       </ToothCard>
 
-      <Text style={styles.sectionLabel}>Roster by rarity</Text>
+      <Text style={[ScreenCopy.sectionLabel, styles.sectionTight]}>Roster by rarity</Text>
       <View style={styles.rarityDeck}>
         {rarityBreakdown.map(({ rarity, unlocked, total }) => (
           <View key={rarity} style={[styles.rarityStripe, { borderLeftColor: rarityColor(rarity) }]}>
@@ -99,7 +100,7 @@ export default function DexScreen() {
         ))}
       </View>
 
-      <Text style={styles.sectionLabel}>Species grid</Text>
+      <Text style={[ScreenCopy.sectionLabel, styles.sectionTight]}>Species grid</Text>
       <Text style={styles.gridHint}>Fresh discoveries glow for three days.</Text>
 
       <View style={styles.grid}>
@@ -169,17 +170,9 @@ export default function DexScreen() {
 }
 
 const styles = StyleSheet.create({
-  head: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: Theme.bone,
+  sectionTight: {
     marginBottom: 8,
-  },
-  sub: {
-    color: Theme.textSecondary,
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 18,
+    marginTop: 0,
   },
   summary: {
     marginBottom: 20,
@@ -237,15 +230,6 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 999,
     backgroundColor: Theme.amber,
-  },
-  sectionLabel: {
-    color: Theme.amberGlow,
-    fontSize: 13,
-    fontWeight: '800',
-    letterSpacing: 1.1,
-    textTransform: 'uppercase',
-    marginBottom: 10,
-    marginTop: 4,
   },
   rarityDeck: {
     gap: 10,

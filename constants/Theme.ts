@@ -21,6 +21,33 @@ export const Theme = {
   mystery: '#2A3540',
 } as const;
 
+/** Shared screen typography for tab roots and modals (RN StyleSheet-ready). */
+export const ScreenCopy = {
+  /** Standard screen title below the nav header. */
+  title: {
+    fontSize: 28,
+    fontWeight: '800' as const,
+    color: Theme.bone,
+    letterSpacing: 0.35,
+    marginBottom: 8,
+  },
+  intro: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: Theme.textSecondary,
+    marginBottom: 20,
+  },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '800' as const,
+    letterSpacing: 1.1,
+    textTransform: 'uppercase' as const,
+    color: Theme.amberGlow,
+    marginBottom: 10,
+    marginTop: 2,
+  },
+} as const;
+
 /** Navigation theme color overrides merged with `DarkTheme` in `app/_layout.tsx`. */
 export const NavTheme = {
   colors: {

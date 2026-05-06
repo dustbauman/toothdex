@@ -14,7 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/components/toothdex/PrimaryButton';
-import { Theme } from '@/constants/Theme';
+import { ScreenCopy, Theme } from '@/constants/Theme';
 import { useCollection } from '@/context/CollectionContext';
 import { conditionLabel, normalizeFieldNotes } from '@/lib/fieldNotes';
 import type { ToothCondition } from '@/types/tooth';
@@ -107,9 +107,10 @@ export default function FieldNoteScreen() {
         contentContainerStyle={[styles.scroll, { paddingBottom: insets.bottom + 24 }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}>
+        <Text style={[ScreenCopy.sectionLabel, styles.stepEyebrow]}>Step 2 · optional details</Text>
         <Text style={styles.lead}>
-          Optional jot-down — leave blanks for anything you do not know. The date stamps automatically when
-          you save.
+          Everything here is optional. Skip straight to Save to collection — the specimen still lands with code,
+          rarity, confidence, and date.
         </Text>
 
         <Text style={styles.label}>Location note</Text>
@@ -181,6 +182,9 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '600',
   },
+  stepEyebrow: {
+    marginBottom: 8,
+  },
   lead: {
     color: Theme.textSecondary,
     fontSize: 15,
@@ -238,6 +242,7 @@ const styles = StyleSheet.create({
     color: Theme.amberGlow,
   },
   saveBtn: {
-    marginTop: 8,
+    marginTop: 18,
+    marginBottom: 8,
   },
 });

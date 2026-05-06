@@ -29,10 +29,10 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 24,
+    paddingTop: 4,
+    paddingBottom: 8,
   },
   bottomSpacer: {
-    height: 16,
+    height: 28,
   },
 });

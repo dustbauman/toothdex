@@ -1,13 +1,14 @@
-import { useRouter } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { PrimaryButton } from '@/components/toothdex/PrimaryButton';
 import { ScreenScroll } from '@/components/toothdex/ScreenScroll';
 import { ToothCard } from '@/components/toothdex/ToothCard';
-import { Theme } from '@/constants/Theme';
+import { ScreenCopy, Theme } from '@/constants/Theme';
 import { TOOTH_BY_ID } from '@/data/teeth';
 import { useCollection } from '@/context/CollectionContext';
 import { conditionLabel } from '@/lib/fieldNotes';
-import { hrefSpecimen } from '@/lib/nav';
+import { hrefDex, hrefScan, hrefSpecimen } from '@/lib/nav';
 import { rarityColor, rarityLabel } from '@/lib/rarity';
 import { specimenCatalogLabel } from '@/lib/specimen';
 
@@ -17,15 +18,26 @@ export default function CollectionScreen() {
 
   return (
     <ScreenScroll>
-      <Text style={styles.head}>Your finds</Text>
-      <Text style={styles.sub}>Every saved tooth stays on-device — perfect for show-and-tell demos.</Text>
+      <Text style={ScreenCopy.title}>Your finds</Text>
+      <Text style={ScreenCopy.intro}>
+        Every saved specimen stays on-device. Demo loop: Identify → save → Species Dex fills in — open any row for
+        the full record.
+      </Text>
 
       {collection.length === 0 ? (
-        <ToothCard title="No teeth yet" subtitle="Scan a tooth, run Identify, then tap Add to collection.">
+        <ToothCard
+          title="Nothing cataloged yet"
+          subtitle="From Scan: pick a photo (or Try Demo Scan), Identify, Add to collection, optional field notes.">
           <Text style={styles.emptyBody}>
-            Your vault will list rarity, date, optional field notes, and photo thumbnails so you can relive each
-            hunt.
+            You will see rarity, specimen code (TDX-xxxx), thumbnails, notes, and match confidence once the first
+            save lands.
           </Text>
+          <Link href={hrefScan()} asChild>
+            <PrimaryButton label="Start on Scan tab" style={styles.emptyPrimary} />
+          </Link>
+          <Link href={hrefDex()} asChild>
+            <PrimaryButton variant="outline" label="Peek at Species Dex" style={styles.emptySecondary} />
+          </Link>
         </ToothCard>
       ) : (
         <View style={{ gap: 12 }}>
@@ -91,22 +103,17 @@ export default function CollectionScreen() {
 }
 
 const styles = StyleSheet.create({
-  head: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: Theme.bone,
-    marginBottom: 8,
-  },
-  sub: {
-    color: Theme.textSecondary,
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 18,
-  },
   emptyBody: {
     color: Theme.textSecondary,
     fontSize: 14,
     lineHeight: 20,
+    marginBottom: 4,
+  },
+  emptyPrimary: {
+    marginTop: 14,
+  },
+  emptySecondary: {
+    marginTop: 10,
   },
   row: {
     flexDirection: 'row',

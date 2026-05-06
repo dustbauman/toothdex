@@ -21,7 +21,7 @@ import { ScanAnalyzingBanner } from '@/components/toothdex/ScanAnalyzingBanner';
 import { ScreenScroll } from '@/components/toothdex/ScreenScroll';
 import { ToothCard } from '@/components/toothdex/ToothCard';
 import { TraitChecklist } from '@/components/toothdex/TraitChecklist';
-import { Theme } from '@/constants/Theme';
+import { ScreenCopy, Theme } from '@/constants/Theme';
 import { useCollection } from '@/context/CollectionContext';
 import { classifyDemoWeightedShowcase, classifyToothDemo } from '@/lib/demoClassifier';
 import { DEMO_SCAN_PREVIEW_URI, isDemoScanPreviewUri } from '@/lib/demoScan';
@@ -196,12 +196,12 @@ export default function ScanScreen() {
 
   return (
     <ScreenScroll>
-      <Text style={styles.lead}>
-        Snap or upload a tooth photo — or tap Try Demo Scan for an instant ToothDex stroll with no camera
-        roll. The demo classifier picks a plausible species from your local Dex; swap in real vision later
-        without changing the flow.
+      <Text style={ScreenCopy.intro}>
+        Add your own photo below, or use Try Demo Scan for the full Identify → Dex → Collection demo with no gallery
+        access.
       </Text>
 
+      <Text style={[ScreenCopy.sectionLabel, styles.sectionPhoto]}>Your photo</Text>
       <View style={styles.row}>
         <PrimaryButton
           label="Choose from library"
@@ -219,14 +219,15 @@ export default function ScanScreen() {
         />
       </View>
 
+      <Text style={[ScreenCopy.sectionLabel, styles.sectionDemo]}>Demo shortcut</Text>
       <PrimaryButton
         label={analyzing ? 'Working…' : 'Try Demo Scan'}
-        variant="ghost"
+        variant="outline"
         onPress={tryDemoScan}
         disabled={analyzing}
         style={styles.demoScanBtn}
       />
-      <Text style={styles.demoScanHint}>Weighted toward Meg · Sand tiger · Mako · White · Snaggle — same reveal flow as the real scanner.</Text>
+      <Text style={styles.demoScanHint}>Weighted Meg · Sand tiger · Mako · Great white · Snaggle — same analyzer reel as photo mode.</Text>
 
       {imageUri && isDemoScanPreviewUri(imageUri) ? (
         <DemoScanPreviewCard analyzing={analyzing} />
@@ -245,6 +246,7 @@ export default function ScanScreen() {
 
       <ScanAnalyzingBanner active={analyzing} progress={progressAnim} />
 
+      <Text style={[ScreenCopy.sectionLabel, styles.sectionAnalyze]}>Analyze</Text>
       <PrimaryButton
         label={analyzing ? 'Analyzing…' : 'Identify tooth'}
         onPress={runIdentify}
@@ -288,15 +290,15 @@ export default function ScanScreen() {
           <Text style={styles.blockLabel}>Collector tip</Text>
           <Text style={styles.body}>{result.tooth.collectingTips[0]}</Text>
 
+          <PrimaryButton label="Add to collection" onPress={openFieldNote} style={styles.addBtn} />
+          <Text style={styles.fieldNoteHint}>Opens a quick field note — optional lines, swipe back to Scan when done.</Text>
+
           <PrimaryButton
-            label="View full field guide"
+            label="Species field guide"
             variant="ghost"
             onPress={() => router.push(hrefToothGuide(result.tooth.id))}
             style={styles.guideBtn}
           />
-
-          <PrimaryButton label="Add to collection" onPress={openFieldNote} style={styles.addBtn} />
-          <Text style={styles.fieldNoteHint}>Opens a quick field note — every line is optional.</Text>
 
           {celebration?.type === 'newDex' ? (
             <View style={styles.celebrateNew} accessibilityRole="alert">
@@ -323,11 +325,17 @@ export default function ScanScreen() {
 }
 
 const styles = StyleSheet.create({
-  lead: {
-    color: Theme.textSecondary,
-    fontSize: 15,
-    lineHeight: 22,
-    marginBottom: 16,
+  sectionPhoto: {
+    marginBottom: 6,
+    marginTop: -4,
+  },
+  sectionDemo: {
+    marginTop: 4,
+    marginBottom: 6,
+  },
+  sectionAnalyze: {
+    marginTop: 2,
+    marginBottom: 8,
   },
   row: {
     flexDirection: 'row',
@@ -373,11 +381,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   demoScanBtn: {
-    marginBottom: 6,
+    marginBottom: 10,
     paddingVertical: 14,
-    backgroundColor: 'rgba(232, 184, 77, 0.12)',
-    borderWidth: 1,
-    borderColor: Theme.border,
   },
   demoScanHint: {
     color: Theme.textMuted,
@@ -551,18 +556,20 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   guideBtn: {
-    marginTop: 4,
-    marginBottom: 4,
+    marginTop: 6,
   },
   addBtn: {
-    marginTop: 8,
+    marginTop: 12,
+    marginBottom: 4,
   },
   fieldNoteHint: {
-    marginTop: 8,
+    marginTop: -2,
+    marginBottom: 4,
     textAlign: 'center',
     color: Theme.textMuted,
     fontSize: 13,
     lineHeight: 18,
+    paddingHorizontal: 8,
   },
   celebrateNew: {
     flexDirection: 'row',

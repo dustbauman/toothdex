@@ -9,6 +9,18 @@ export function hrefFieldNote(): Href {
   return '/field-note' as unknown as Href;
 }
 
+export function hrefScan(): Href {
+  return '/scan' as unknown as Href;
+}
+
+export function hrefCollection(): Href {
+  return '/collection' as unknown as Href;
+}
+
+export function hrefDex(): Href {
+  return '/dex' as unknown as Href;
+}
+
 export function hrefSpecimen(entryId: string): Href {
   return { pathname: '/specimen/[entryId]', params: { entryId } } as unknown as Href;
 }

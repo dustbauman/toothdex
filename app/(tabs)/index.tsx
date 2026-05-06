@@ -4,10 +4,10 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { PrimaryButton } from '@/components/toothdex/PrimaryButton';
 import { ScreenScroll } from '@/components/toothdex/ScreenScroll';
 import { ToothCard } from '@/components/toothdex/ToothCard';
-import { Theme } from '@/constants/Theme';
+import { ScreenCopy, Theme } from '@/constants/Theme';
 import { TOOTH_BY_ID } from '@/data/teeth';
 import { useCollection } from '@/context/CollectionContext';
-import { hrefToothGuide } from '@/lib/nav';
+import { hrefDex, hrefScan, hrefSpecimen, hrefToothGuide } from '@/lib/nav';
 import { rarityColor, rarityLabel } from '@/lib/rarity';
 
 export default function HomeScreen() {
@@ -23,7 +23,7 @@ export default function HomeScreen() {
   return (
     <ScreenScroll>
       <Text style={styles.brand}>ToothDex</Text>
-      <Text style={styles.tagline}>Identify. Collect. Complete the hunt.</Text>
+      <Text style={[ScreenCopy.intro, styles.tagline]}>Identify · collect · complete the Species Dex.</Text>
 
       <ToothCard style={styles.progressCard} title="Collection progress">
         <View style={styles.progressRow}>
@@ -52,8 +52,16 @@ export default function HomeScreen() {
 
       <Text style={styles.sectionLabel}>Recent discoveries</Text>
       {recent.length === 0 ? (
-        <ToothCard subtitle="No finds yet — scan your first tooth to start the story.">
-          <Text style={styles.emptyHint}>Your timeline will light up with names, dates, and rarities.</Text>
+        <ToothCard title="Vault is empty" subtitle="Run Identify on the Scan tab, then save — your loop starts here.">
+          <Text style={styles.emptyHint}>
+            Prefer no camera roll? Tap Try Demo Scan on Scan — same Identify and Add to collection flow.
+          </Text>
+          <Link href={hrefScan()} asChild>
+            <PrimaryButton label="Go to Scan" style={styles.emptyPrimary} />
+          </Link>
+          <Link href={hrefDex()} asChild>
+            <PrimaryButton variant="outline" label="Browse Species Dex" style={styles.emptySecondary} />
+          </Link>
         </ToothCard>
       ) : (
         <View style={styles.recentList}>
@@ -64,7 +72,9 @@ export default function HomeScreen() {
               <Pressable
                 key={item.entryId}
                 accessibilityRole="button"
-                onPress={() => router.push(hrefToothGuide(item.toothId))}
+                accessibilityHint="Long press to open the species field guide"
+                onPress={() => router.push(hrefSpecimen(item.entryId))}
+                onLongPress={() => router.push(hrefToothGuide(item.toothId))}
                 style={({ pressed }) => [styles.recentRow, pressed && styles.recentRowPressed]}>
                 {item.imageUri ? (
                   <Image source={{ uri: item.imageUri }} style={styles.recentThumb} />
@@ -79,7 +89,7 @@ export default function HomeScreen() {
                     {new Date(item.savedAt).toLocaleDateString()} ·{' '}
                     <Text style={{ color: rarityColor(tooth.rarity) }}>{rarityLabel(tooth.rarity)}</Text>
                   </Text>
-                  <Text style={styles.recentHint}>Field guide →</Text>
+                  <Text style={styles.recentHint}>Specimen record → · hold for field guide</Text>
                 </View>
               </Pressable>
             );
@@ -87,9 +97,11 @@ export default function HomeScreen() {
         </View>
       )}
 
-      <Link href="/scan" asChild>
-        <PrimaryButton label="Scan a tooth" style={styles.scanCta} />
+      <Text style={styles.ctaEyebrow}>Primary action</Text>
+      <Link href={hrefScan()} asChild>
+        <PrimaryButton label="Open Scan" style={styles.scanCta} />
       </Link>
+      <Text style={styles.ctaHint}>Photo, gallery, or Try Demo Scan — then Identify and save.</Text>
     </ScreenScroll>
   );
 }
@@ -103,11 +115,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   tagline: {
-    marginTop: 8,
-    marginBottom: 22,
-    fontSize: 16,
-    color: Theme.textSecondary,
-    lineHeight: 22,
+    marginTop: 4,
+    marginBottom: 20,
   },
   progressCard: {
     marginBottom: 22,
@@ -155,12 +164,28 @@ const styles = StyleSheet.create({
     backgroundColor: Theme.amber,
   },
   sectionLabel: {
-    color: Theme.textSecondary,
+    ...ScreenCopy.sectionLabel,
+    marginTop: 8,
+  },
+  ctaEyebrow: {
+    ...ScreenCopy.sectionLabel,
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  ctaHint: {
+    marginTop: 10,
     fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 1.2,
-    textTransform: 'uppercase',
-    marginBottom: 10,
+    lineHeight: 18,
+    color: Theme.textMuted,
+    textAlign: 'center',
+    paddingHorizontal: 8,
+    marginBottom: 4,
+  },
+  emptyPrimary: {
+    marginTop: 16,
+  },
+  emptySecondary: {
+    marginTop: 10,
   },
   recentList: {
     gap: 10,
@@ -214,6 +239,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   scanCta: {
-    marginTop: 4,
+    marginTop: 0,
   },
 });

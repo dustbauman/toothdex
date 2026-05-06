@@ -21,6 +21,12 @@ export default function TabLayout() {
         tabBarStyle: {
           backgroundColor: Theme.oceanMid,
           borderTopColor: Theme.border,
+          paddingTop: 4,
+        },
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '600',
+          letterSpacing: 0.2,
         },
         headerStyle: {
           backgroundColor: Theme.oceanDeep,

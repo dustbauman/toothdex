@@ -10,7 +10,7 @@ import { Theme } from '@/constants/Theme';
 import { TOOTH_BY_ID } from '@/data/teeth';
 import { useCollection } from '@/context/CollectionContext';
 import { conditionLabel } from '@/lib/fieldNotes';
-import { hrefToothGuide } from '@/lib/nav';
+import { hrefCollection, hrefToothGuide } from '@/lib/nav';
 import { rarityColor, rarityLabel } from '@/lib/rarity';
 import { specimenCatalogLabel } from '@/lib/specimen';
 
@@ -46,7 +46,8 @@ export default function SpecimenDetailScreen() {
         <Text style={styles.missBody}>
           This entry may have been removed, or the link is outdated. Try opening it again from Collection.
         </Text>
-        <PrimaryButton label="Back to Collection" variant="outline" onPress={() => router.back()} />
+        <PrimaryButton label="Open Collection tab" onPress={() => router.replace(hrefCollection())} style={styles.missPrimary} />
+        <PrimaryButton label="Go back" variant="outline" onPress={() => router.back()} style={styles.missGhost} />
       </View>
     );
   }
@@ -63,7 +64,7 @@ export default function SpecimenDetailScreen() {
   return (
     <ScrollView
       style={styles.scroll}
-      contentContainerStyle={[styles.content, { paddingBottom: 32 + insets.bottom }]}
+      contentContainerStyle={[styles.content, { paddingBottom: 36 + insets.bottom }]}
       showsVerticalScrollIndicator={false}>
       <View style={styles.plaque}>
         <Text style={styles.plaqueEyebrow}>Vault specimen</Text>
@@ -147,12 +148,7 @@ export default function SpecimenDetailScreen() {
         ))}
       </ToothCard>
 
-      <PrimaryButton
-        label="Open species field guide"
-        variant="ghost"
-        onPress={() => router.push(hrefToothGuide(tooth.id))}
-        style={styles.guideBtn}
-      />
+      <PrimaryButton label="Species field guide" variant="outline" onPress={() => router.push(hrefToothGuide(tooth.id))} style={styles.guideBtn} />
     </ScrollView>
   );
 }
@@ -164,7 +160,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 20,
-    paddingTop: 12,
+    paddingTop: 8,
     paddingBottom: 32,
   },
   missWrap: {
@@ -190,6 +186,18 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     textAlign: 'center',
     marginBottom: 24,
+    paddingHorizontal: 8,
+  },
+  missPrimary: {
+    width: '100%',
+    marginBottom: 12,
+    maxWidth: 360,
+    alignSelf: 'center',
+  },
+  missGhost: {
+    width: '100%',
+    maxWidth: 360,
+    alignSelf: 'center',
   },
   plaque: {
     backgroundColor: Theme.oceanMid,

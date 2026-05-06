@@ -1,12 +1,13 @@
 import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import { useLayoutEffect } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { PrimaryButton } from '@/components/toothdex/PrimaryButton';
 import { ScreenScroll } from '@/components/toothdex/ScreenScroll';
 import { ToothCard } from '@/components/toothdex/ToothCard';
-import { Theme } from '@/constants/Theme';
+import { ScreenCopy, Theme } from '@/constants/Theme';
 import { TOOTH_BY_ID } from '@/data/teeth';
+import { hrefDex, hrefScan } from '@/lib/nav';
 import { rarityColor, rarityLabel } from '@/lib/rarity';
 
 export default function ToothFieldGuideScreen() {
@@ -28,14 +29,17 @@ export default function ToothFieldGuideScreen() {
       <ScreenScroll contentContainerStyle={styles.centered}>
         <Text style={styles.missTitle}>Species not found</Text>
         <Text style={styles.missBody}>This ID is not in the ToothDex database.</Text>
-        <PrimaryButton label="Back to Dex" onPress={() => router.back()} />
+        <PrimaryButton label="Open Species Dex" onPress={() => router.replace(hrefDex())} style={styles.missPrimary} />
+        <PrimaryButton label="Go back" variant="outline" onPress={() => router.back()} style={styles.missGhost} />
       </ScreenScroll>
     );
   }
 
   return (
     <ScreenScroll>
+      <Text style={styles.commonName}>{tooth.commonName}</Text>
       <Text style={styles.latin}>{tooth.scientificName}</Text>
+      <Text style={[ScreenCopy.intro, styles.introBlurb]}>{tooth.shortDescription}</Text>
       <View style={styles.badgeRow}>
         <View style={[styles.badge, { borderColor: rarityColor(tooth.rarity) }]}>
           <Text style={[styles.badgeText, { color: rarityColor(tooth.rarity) }]}>
@@ -44,10 +48,6 @@ export default function ToothFieldGuideScreen() {
         </View>
         <Text style={styles.era}>{tooth.era}</Text>
       </View>
-
-      <ToothCard title="Overview" style={styles.block}>
-        <Text style={styles.body}>{tooth.shortDescription}</Text>
-      </ToothCard>
 
       <ToothCard title="Identification traits" style={styles.block}>
         {tooth.identificationTraits.map((t) => (
@@ -73,9 +73,8 @@ export default function ToothFieldGuideScreen() {
         ))}
       </ToothCard>
 
-      <Pressable onPress={() => router.push('/scan')} accessibilityRole="button">
-        <Text style={styles.link}>Scan another tooth</Text>
-      </Pressable>
+      <PrimaryButton label="Identify another specimen" variant="outline" onPress={() => router.push(hrefScan())} style={styles.bottomCta} />
+      <Text style={[ScreenCopy.intro, styles.linkHint]}>Returns to Scan — same demo loop as onboarding.</Text>
     </ScreenScroll>
   );
 }
@@ -97,12 +96,33 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
     marginBottom: 20,
+    textAlign: 'center',
+    paddingHorizontal: 8,
+  },
+  missPrimary: {
+    alignSelf: 'stretch',
+    marginBottom: 10,
+  },
+  missGhost: {
+    alignSelf: 'stretch',
+  },
+  commonName: {
+    color: Theme.bone,
+    fontSize: 26,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+    marginBottom: 4,
   },
   latin: {
     color: Theme.foam,
     fontSize: 17,
     fontStyle: 'italic',
-    marginBottom: 10,
+    marginBottom: 6,
+  },
+  introBlurb: {
+    marginTop: 0,
+    marginBottom: 14,
+    fontSize: 15,
   },
   badgeRow: {
     flexDirection: 'row',
@@ -131,11 +151,6 @@ const styles = StyleSheet.create({
   block: {
     marginBottom: 14,
   },
-  body: {
-    color: Theme.textSecondary,
-    fontSize: 15,
-    lineHeight: 22,
-  },
   bullet: {
     color: Theme.textSecondary,
     fontSize: 14,
@@ -154,12 +169,16 @@ const styles = StyleSheet.create({
     lineHeight: 21,
     marginBottom: 8,
   },
-  link: {
-    marginTop: 8,
-    marginBottom: 24,
-    color: Theme.amberGlow,
-    fontSize: 16,
-    fontWeight: '700',
+  bottomCta: {
+    marginTop: 10,
+    marginBottom: 8,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  linkHint: {
+    marginTop: 4,
+    marginBottom: 20,
     textAlign: 'center',
+    fontSize: 13,
   },
 });
