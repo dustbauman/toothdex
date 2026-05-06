@@ -23,12 +23,41 @@ import { ToothCard } from '@/components/toothdex/ToothCard';
 import { TraitChecklist } from '@/components/toothdex/TraitChecklist';
 import { Theme } from '@/constants/Theme';
 import { useCollection } from '@/context/CollectionContext';
-import { classifyToothDemo } from '@/lib/demoClassifier';
+import { classifyDemoWeightedShowcase, classifyToothDemo } from '@/lib/demoClassifier';
+import { DEMO_SCAN_PREVIEW_URI, isDemoScanPreviewUri } from '@/lib/demoScan';
 import { hrefFieldNote, hrefToothGuide } from '@/lib/nav';
 import { rarityColor, rarityLabel } from '@/lib/rarity';
 import type { ScanResult } from '@/types/tooth';
 
 const ANALYSIS_MS = 1680;
+
+function DemoScanPreviewCard({ analyzing }: { analyzing: boolean }) {
+  return (
+    <View
+      accessibilityRole="image"
+      accessibilityLabel="Demo specimen placeholder illustration"
+      style={[styles.preview, styles.demoPreview, analyzing && styles.previewDim]}>
+      <View pointerEvents="none" style={styles.demoGlowBlob} />
+      <View pointerEvents="none" style={styles.demoGlowBlobRight} />
+      <View style={styles.demoRibbon}>
+        <FontAwesome name="magic" size={12} color={Theme.charcoal} style={styles.demoRibbonIcon} />
+        <Text style={styles.demoRibbonText}>DEMO FIND</Text>
+      </View>
+      <Text style={styles.demoToothEmoji} accessibilityElementsHidden importantForAccessibility="no">
+        🦷
+      </Text>
+      <Text style={styles.demoPreviewTitle}>Showcase specimen</Text>
+      <Text style={styles.demoPreviewCaption}>
+        Local placeholder — no gallery access needed. Matches run through the live analyzer reel.
+      </Text>
+      <View style={styles.demoSerration}>
+        {[0, 1, 2, 3, 4].map((i) => (
+          <View key={i} style={styles.demoSerrDot} />
+        ))}
+      </View>
+    </View>
+  );
+}
 
 type Phase = 'idle' | 'analyzing' | 'revealed';
 type Celebration = { type: 'newDex' | 'saved'; name: string } | null;
@@ -93,31 +122,47 @@ export default function ScanScreen() {
     }
   };
 
-  const runIdentify = useCallback(() => {
-    if (!imageUri || analyzing) return;
-    bumpScanGeneration();
-    const runId = scanRunRef.current;
-    setCelebration(null);
-    setResult(null);
-    setPhase('analyzing');
-    progressAnim.setValue(0);
+  const scheduleAnalysis = useCallback(
+    (resolveResult: () => ScanResult) => {
+      bumpScanGeneration();
+      const runId = scanRunRef.current;
+      setCelebration(null);
+      setResult(null);
+      setPhase('analyzing');
+      progressAnim.setValue(0);
 
-    Animated.timing(progressAnim, {
-      toValue: 1,
-      duration: ANALYSIS_MS,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
-    }).start(({ finished }) => {
-      if (!finished || scanRunRef.current !== runId) return;
-      const next = classifyToothDemo(imageUri);
-      setResult(next);
-      registerDiscovery(next.tooth.id);
-      setPhase('revealed');
-      if (Platform.OS !== 'web') {
-        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      }
-    });
-  }, [analyzing, imageUri, progressAnim, registerDiscovery]);
+      Animated.timing(progressAnim, {
+        toValue: 1,
+        duration: ANALYSIS_MS,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false,
+      }).start(({ finished }) => {
+        if (!finished || scanRunRef.current !== runId) return;
+        const next = resolveResult();
+        setResult(next);
+        registerDiscovery(next.tooth.id);
+        setPhase('revealed');
+        if (Platform.OS !== 'web') {
+          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        }
+      });
+    },
+    [bumpScanGeneration, progressAnim, registerDiscovery]
+  );
+
+  const runIdentify = useCallback(() => {
+    if (!imageUri || analyzing || isDemoScanPreviewUri(imageUri)) return;
+    scheduleAnalysis(() => classifyToothDemo(imageUri));
+  }, [analyzing, imageUri, scheduleAnalysis]);
+
+  const tryDemoScan = useCallback(() => {
+    if (analyzing) return;
+    setCelebration(null);
+    setImageUri(DEMO_SCAN_PREVIEW_URI);
+    setResult(null);
+    setPhase('idle');
+    scheduleAnalysis(() => classifyDemoWeightedShowcase());
+  }, [analyzing, scheduleAnalysis]);
 
   useFocusEffect(
     useCallback(() => {
@@ -141,7 +186,7 @@ export default function ScanScreen() {
     const hadSpeciesInVault = collection.some((e) => e.toothId === result.tooth.id);
     setFieldNoteDraft({
       toothId: result.tooth.id,
-      imageUri,
+      imageUri: isDemoScanPreviewUri(imageUri) ? null : imageUri,
       confidence: result.confidence,
       toothCommonName: result.tooth.commonName,
       isFirstVaultSpecies: !hadSpeciesInVault,
@@ -152,8 +197,9 @@ export default function ScanScreen() {
   return (
     <ScreenScroll>
       <Text style={styles.lead}>
-        Snap or upload a tooth photo. The demo classifier picks a plausible match from the local shark
-        database — swap in a vision API later without changing the UI flow.
+        Snap or upload a tooth photo — or tap Try Demo Scan for an instant ToothDex stroll with no camera
+        roll. The demo classifier picks a plausible species from your local Dex; swap in real vision later
+        without changing the flow.
       </Text>
 
       <View style={styles.row}>
@@ -173,7 +219,18 @@ export default function ScanScreen() {
         />
       </View>
 
-      {imageUri ? (
+      <PrimaryButton
+        label={analyzing ? 'Working…' : 'Try Demo Scan'}
+        variant="ghost"
+        onPress={tryDemoScan}
+        disabled={analyzing}
+        style={styles.demoScanBtn}
+      />
+      <Text style={styles.demoScanHint}>Weighted toward Meg · Sand tiger · Mako · White · Snaggle — same reveal flow as the real scanner.</Text>
+
+      {imageUri && isDemoScanPreviewUri(imageUri) ? (
+        <DemoScanPreviewCard analyzing={analyzing} />
+      ) : imageUri ? (
         <Image
           source={{ uri: imageUri }}
           style={[styles.preview, analyzing && styles.previewDim]}
@@ -191,9 +248,14 @@ export default function ScanScreen() {
       <PrimaryButton
         label={analyzing ? 'Analyzing…' : 'Identify tooth'}
         onPress={runIdentify}
-        disabled={!imageUri || analyzing}
+        disabled={!imageUri || analyzing || isDemoScanPreviewUri(imageUri)}
         style={styles.identify}
       />
+      {revealed && imageUri && isDemoScanPreviewUri(imageUri) ? (
+        <Text style={styles.demoIdentifyNote}>
+          Demo scans save like real finds — your vault sees the chosen species without a gallery photo attached.
+        </Text>
+      ) : null}
 
       {result && revealed ? (
         <ToothCard style={styles.result} title="Likely match" subtitle="Demo classifier — for show only">
@@ -309,6 +371,128 @@ const styles = StyleSheet.create({
     color: Theme.textMuted,
     marginTop: 6,
     fontSize: 13,
+  },
+  demoScanBtn: {
+    marginBottom: 6,
+    paddingVertical: 14,
+    backgroundColor: 'rgba(232, 184, 77, 0.12)',
+    borderWidth: 1,
+    borderColor: Theme.border,
+  },
+  demoScanHint: {
+    color: Theme.textMuted,
+    fontSize: 12,
+    lineHeight: 17,
+    marginBottom: 16,
+    paddingHorizontal: 4,
+    textAlign: 'center',
+  },
+  demoPreview: {
+    position: 'relative',
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    backgroundColor: 'rgba(30, 47, 68, 0.95)',
+    borderStyle: 'solid',
+    borderColor: Theme.amber,
+    borderWidth: 1.5,
+  },
+  demoRibbon: {
+    position: 'absolute',
+    top: 14,
+    right: -28,
+    backgroundColor: Theme.amberGlow,
+    paddingHorizontal: 36,
+    paddingVertical: 6,
+    transform: [{ rotate: '35deg' }],
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    zIndex: 3,
+    shadowColor: Theme.amber,
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
+  },
+  demoRibbonIcon: {
+    marginRight: -2,
+  },
+  demoRibbonText: {
+    color: Theme.charcoal,
+    fontWeight: '900',
+    fontSize: 11,
+    letterSpacing: 1,
+  },
+  demoGlowBlob: {
+    position: 'absolute',
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: 'rgba(201, 148, 58, 0.12)',
+    top: -40,
+    left: -70,
+    zIndex: 0,
+  },
+  demoGlowBlobRight: {
+    position: 'absolute',
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: 'rgba(168, 197, 217, 0.09)',
+    bottom: -30,
+    right: -40,
+    zIndex: 0,
+  },
+  demoToothEmoji: {
+    fontSize: 64,
+    zIndex: 1,
+    marginBottom: 6,
+    textShadowColor: 'rgba(0,0,0,0.35)',
+    textShadowRadius: 6,
+    textShadowOffset: { width: 0, height: 2 },
+  },
+  demoPreviewTitle: {
+    zIndex: 1,
+    color: Theme.bone,
+    fontSize: 17,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+    marginBottom: 6,
+  },
+  demoPreviewCaption: {
+    zIndex: 1,
+    color: Theme.textSecondary,
+    fontSize: 13,
+    lineHeight: 19,
+    textAlign: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 14,
+  },
+  demoSerration: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    zIndex: 1,
+  },
+  demoSerrDot: {
+    width: 12,
+    height: 26,
+    borderRadius: 3,
+    backgroundColor: 'rgba(232, 184, 77, 0.85)',
+    borderWidth: 1,
+    borderColor: 'rgba(244,241,234,0.25)',
+    transform: [{ rotate: '-8deg' }],
+  },
+  demoIdentifyNote: {
+    color: Theme.textMuted,
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
+    marginTop: -10,
+    marginBottom: 16,
+    paddingHorizontal: 12,
   },
   identify: {
     marginBottom: 18,
